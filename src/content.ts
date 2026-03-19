@@ -103,7 +103,15 @@ async function uploadToDrive(file: File, statusEl: HTMLElement) {
                 body: JSON.stringify({ role: 'reader', type: 'anyone' })
               });
 
-              const directLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
+              const isImage = file.type.startsWith('image/');
+              const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+
+              // For images, use 'view' instead of 'download' so Google doesn't force attachment headers.
+              // We also append the image extension as a hash (e.g., #.png) so Discord's scraper parses it natively!
+              const exportAction = isImage ? 'view' : 'download';
+              const extHash = isImage ? (file.name.match(/\.[0-9a-z]+$/i)?.[0] || '.png') : '';
+              
+              const directLink = `https://drive.google.com/uc?export=${exportAction}&id=${fileId}${extHash}`;
 
               // Track upload stats
               chrome.storage.local.get({ uploadCount: 0, dataSavedMB: 0 }, (stats) => {
@@ -116,7 +124,6 @@ async function uploadToDrive(file: File, statusEl: HTMLElement) {
               // Read user preferences for link format and auto-send
               chrome.storage.local.get({ hiddenLink: true, autoSend: true, pdfFormat: true }, (prefs) => {
                 let linkText = directLink;
-                const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
                 if (isPdf && prefs.pdfFormat) {
                   linkText = `[[${file.name}]](${directLink})`;
