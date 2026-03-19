@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/Google%20Drive-API-FBBC04?style=for-the-badge&logo=googledrive&logoColor=white" />
 </p>
 
-<h1 align="center">🕵️ Discord FileSneak</h1>
+<h1 align="center">Discord FileSneak</h1>
 
 <p align="center">
   <strong>Seamlessly bypass Discord's file size limit by sneaking large uploads through Google Drive.</strong>
@@ -17,19 +17,19 @@
 
 ---
 
-## ✨ What It Does
+## What It Does
 
 Discord limits file uploads to **10 MB** (or 50 MB with Nitro). FileSneak intercepts oversized files, silently uploads them to your Google Drive, and posts a direct link in chat — all in one smooth motion. The link is formatted as an invisible `[.](url)` markdown dot, making it feel completely native.
 
 **Before FileSneak:**
-> ❌ *"Your files are too powerful"* → compress, convert, re-export, give up
+> *"Your files are too powerful"* → compress, convert, re-export, give up
 
 **After FileSneak:**
-> ✅ Drop any file → progress bar → link appears in chat → done
+> Drop any file → progress bar → link appears in chat → done
 
 ---
 
-## 🎬 How It Works
+## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -49,21 +49,21 @@ Discord limits file uploads to **10 MB** (or 50 MB with Nitro). FileSneak interc
 
 ---
 
-## 🧩 Features
+## Features
 
 | Feature | Description |
 |---|---|
-| 🚀 **Auto-upload** | Intercepts files exceeding the threshold via drag-and-drop or file picker |
-| 📊 **Progress bar** | Real-time upload progress with status updates |
-| 🔗 **Invisible links** | Sends as `[.](url)` — a nearly invisible dot that embeds the link |
-| ⚡ **Auto-send** | Message is sent automatically via Discord's API — no Enter key needed |
-| 🔐 **Google OAuth** | Secure authentication with account chooser and persistent token caching |
-| ⚙️ **Settings panel** | Configurable size threshold, link format, auto-send toggle, and upload stats |
-| 🧠 **Smart persistence** | Auth tokens survive browser restarts via `chrome.storage.local` |
+| **Auto-upload** | Intercepts files exceeding the threshold via drag-and-drop or file picker |
+| **Progress bar** | Real-time upload progress with status updates |
+| **Invisible links** | Sends as `[.](url)` — a nearly invisible dot that embeds the link |
+| **Auto-send** | Message is sent automatically via Discord's API — no Enter key needed |
+| **Google OAuth** | Secure authentication with account chooser and persistent token caching |
+| **Settings panel** | Configurable size threshold, link format, auto-send toggle, and upload stats |
+| **Smart persistence** | Auth tokens survive browser restarts via `chrome.storage.local` |
 
 ---
 
-## 🛠️ Installation
+## Installation
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18+)
@@ -115,7 +115,7 @@ After loading the extension for the first time:
 
 ---
 
-## ⚙️ Settings
+## Settings
 
 Click the extension icon in Chrome's toolbar to access the settings panel:
 
@@ -127,7 +127,7 @@ Click the extension icon in Chrome's toolbar to access the settings panel:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Discord FileSneak
@@ -156,7 +156,7 @@ The solution: `injector.js` is loaded as a file-based `<script>` tag (bypassing 
 
 ---
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
 - **Google tokens** are cached locally via `chrome.storage.local` and never leave your browser
 - **Discord tokens** are read from your own browser session (never stored or transmitted externally)
@@ -165,7 +165,7 @@ The solution: `injector.js` is loaded as a file-based `<script>` tag (bypassing 
 
 ---
 
-## 📦 Tech Stack
+## Tech Stack
 
 - **TypeScript** — Type-safe extension code
 - **Vite** + **@crxjs/vite-plugin** — Fast builds with HMR support
@@ -175,12 +175,12 @@ The solution: `injector.js` is loaded as a file-based `<script>` tag (bypassing 
 
 ---
 
-## 📄 License
+## License
 
 MIT — do whatever you want with it.
 
 ---
 
 <p align="center">
-  <strong>Built with 🫠 and way too many hours of reverse-engineering Discord's event system.</strong>
+  <strong>Built with care and way too many hours of reverse-engineering Discord's event system.</strong>
 </p>
