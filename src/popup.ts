@@ -1,7 +1,7 @@
-// Default settings
 const DEFAULTS = {
   autoSend: true,
   hiddenLink: true,
+  pdfFormat: true,
   sizeThreshold: 10,
   uploadCount: 0,
   dataSavedMB: 0
@@ -13,6 +13,7 @@ function loadSettings() {
     // Toggles
     (document.getElementById('autoSend') as HTMLInputElement).checked = data.autoSend;
     (document.getElementById('hiddenLink') as HTMLInputElement).checked = data.hiddenLink;
+    (document.getElementById('pdfFormat') as HTMLInputElement).checked = data.pdfFormat;
 
     // Number
     (document.getElementById('sizeThreshold') as HTMLInputElement).value = String(data.sizeThreshold);
@@ -32,22 +33,16 @@ function loadSettings() {
 // ── Check Auth ────────────────────────────────────────
 function checkAuthStatus() {
   chrome.storage.local.get(['driveToken', 'driveTokenExpiry'], (data) => {
-    const badge = document.getElementById('auth-status')!;
-    const text = document.getElementById('auth-text')!;
     const btn = document.getElementById('authBtn')!;
     const info = document.getElementById('token-info')!;
 
     if (data.driveToken && data.driveTokenExpiry && Date.now() < data.driveTokenExpiry) {
-      badge.className = 'auth-badge connected';
-      text.textContent = 'Connected to Google Drive';
       btn.textContent = 'Sign Out';
       btn.className = 'action-btn signed-in';
 
       const mins = Math.round((data.driveTokenExpiry - Date.now()) / 60000);
       info.textContent = `Token expires in ${mins} min`;
     } else {
-      badge.className = 'auth-badge disconnected';
-      text.textContent = 'Not connected';
       btn.textContent = 'Sign In';
       btn.className = 'action-btn';
       info.textContent = 'Manage your Google Drive connection';
@@ -87,6 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle: Hidden link
   document.getElementById('hiddenLink')!.addEventListener('change', (e) => {
     saveSetting('hiddenLink', (e.target as HTMLInputElement).checked);
+  });
+
+  // Toggle: PDF Format
+  document.getElementById('pdfFormat')!.addEventListener('change', (e) => {
+    saveSetting('pdfFormat', (e.target as HTMLInputElement).checked);
   });
 
   // Number: Size threshold

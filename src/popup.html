@@ -9,19 +9,7 @@
 </head>
 <body>
   <div class="popup-container">
-    <header class="popup-header">
-      <div class="logo-row">
-        <div class="logo-icon">🚀</div>
-        <div>
-          <h1>Drive Uploader</h1>
-          <p class="subtitle">Bypass Discord's file limit</p>
-        </div>
-      </div>
-      <div id="auth-status" class="auth-badge disconnected">
-        <span class="status-dot"></span>
-        <span id="auth-text">Not connected</span>
-      </div>
-    </header>
+
 
     <div class="settings-sections">
       <!-- Upload Behavior -->
@@ -46,6 +34,17 @@
           </div>
           <label class="toggle">
             <input type="checkbox" id="hiddenLink" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="pdfFormat">PDF bracket format</label>
+            <p class="setting-desc">Send PDFs as <code>[[name.pdf]](url)</code></p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pdfFormat" checked>
             <span class="toggle-slider"></span>
           </label>
         </div>

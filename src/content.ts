@@ -114,8 +114,15 @@ async function uploadToDrive(file: File, statusEl: HTMLElement) {
               });
 
               // Read user preferences for link format and auto-send
-              chrome.storage.local.get({ hiddenLink: true, autoSend: true }, (prefs) => {
-                const linkText = prefs.hiddenLink ? `[⠀](${directLink})` : directLink;
+              chrome.storage.local.get({ hiddenLink: true, autoSend: true, pdfFormat: true }, (prefs) => {
+                let linkText = directLink;
+                const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+
+                if (isPdf && prefs.pdfFormat) {
+                  linkText = `[[${file.name}]](${directLink})`;
+                } else if (prefs.hiddenLink) {
+                  linkText = `[⠀](${directLink})`;
+                }
 
                 if (prefs.autoSend) {
                   injectLink(linkText);
