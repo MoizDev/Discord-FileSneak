@@ -115,7 +115,7 @@ async function uploadToDrive(file: File, statusEl: HTMLElement) {
 
               // Read user preferences for link format and auto-send
               chrome.storage.local.get({ hiddenLink: true, autoSend: true }, (prefs) => {
-                const linkText = prefs.hiddenLink ? `[.](${directLink})` : directLink;
+                const linkText = prefs.hiddenLink ? `[⠀](${directLink})` : directLink;
 
                 if (prefs.autoSend) {
                   injectLink(linkText);
