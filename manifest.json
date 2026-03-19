@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Discord Drive Uploader",
+  "version": "1.0.0",
+  "description": "Upload files >10MB to Google Drive directly from Discord",
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Discord Drive Uploader Settings"
+  },
+  "permissions": [
+    "identity",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.discord.com/*",
+    "https://www.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "263305031428-vj8oj0ohqet26unkl3ivdg0gav4c4lcl.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://discord.com/*"],
+      "js": ["src/content.ts"],
+      "css": ["src/style.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injector.js"],
+      "matches": ["https://discord.com/*"]
+    }
+  ]
+}

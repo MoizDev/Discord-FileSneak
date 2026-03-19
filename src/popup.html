@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Drive Uploader</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="logo-row">
+        <div class="logo-icon">🚀</div>
+        <div>
+          <h1>Drive Uploader</h1>
+          <p class="subtitle">Bypass Discord's file limit</p>
+        </div>
+      </div>
+      <div id="auth-status" class="auth-badge disconnected">
+        <span class="status-dot"></span>
+        <span id="auth-text">Not connected</span>
+      </div>
+    </header>
+
+    <div class="settings-sections">
+      <!-- Upload Behavior -->
+      <section class="settings-group">
+        <h2 class="group-title">Upload Behavior</h2>
+        
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="autoSend">Auto-send message</label>
+            <p class="setting-desc">Automatically send the link after upload completes</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoSend" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="hiddenLink">Invisible link format</label>
+            <p class="setting-desc">Send as <code>[.](url)</code> so the dot is nearly invisible</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="hiddenLink" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="sizeThreshold">Size threshold (MB)</label>
+            <p class="setting-desc">Intercept files larger than this size</p>
+          </div>
+          <div class="number-input">
+            <button class="num-btn minus" id="sizeDown">−</button>
+            <input type="number" id="sizeThreshold" value="10" min="1" max="500">
+            <button class="num-btn plus" id="sizeUp">+</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Account -->
+      <section class="settings-group">
+        <h2 class="group-title">Google Account</h2>
+        
+        <div class="setting-row">
+          <div class="setting-info">
+            <label>Authentication</label>
+            <p class="setting-desc" id="token-info">Manage your Google Drive connection</p>
+          </div>
+          <button id="authBtn" class="action-btn">Sign In</button>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section class="settings-group">
+        <h2 class="group-title">Stats</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-value" id="uploadCount">0</span>
+            <span class="stat-label">Files uploaded</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="dataSaved">0 MB</span>
+            <span class="stat-label">Data bypassed</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="popup-footer">
+      <span>v1.0.0</span>
+      <button id="resetBtn" class="reset-btn">Reset All</button>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>
