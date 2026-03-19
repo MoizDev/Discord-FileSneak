@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7hTX5moBXQEJhA8zeCwzb8FgzWUyLGrJFBHxVEWSCszrIwRfytkd858M59inTjmqDnZwYMApmOqPUWX+L4PNZ+1wh+DWjf/k15r9srdO8AZ4DbIO/ll+ZRYSeJ0JJ1G/v06ItdFW/JP1MxpihvA1xdgCfDcXWsTzB0PIiqZiI6xQGEZOaaDQgicNZE77fiz5UXyoKBJ0DCbjhrX/vl6De3K6b+NvijYTJneSvkXzpayiwknJQpHzzslHw5GFKspLtSoLnZeLvj4rJkscDotv+hWU5tqd597wuOvbf/t1Pw9U38oG30+t8YKREh5ZVRnaQHeqTCm8t1n2zz26qGVlzQIDAQAB",
   "name": "Discord Drive Uploader",
   "version": "1.0.0",
   "description": "Upload files >10MB to Google Drive directly from Discord",
