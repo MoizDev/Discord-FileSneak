@@ -4,25 +4,17 @@
 console.log('[DDU MAINWORLD] Bridge script loaded and executing');
 window.dispatchEvent(new CustomEvent('ddu-bridge-ready'));
 
-window.addEventListener('ddu-inject-message', async (e) => {
-  const linkText = e.detail;
-  console.log('[DDU MAINWORLD] Received inject request:', linkText);
+// ── Shared helpers ───────────────────────────────────────────────
 
-  // 1. Get the channel ID from the current URL
-  // URL format: /channels/{guild_id}/{channel_id} or /channels/@me/{channel_id}
+function getChannelId() {
   const pathParts = location.pathname.split('/');
-  const channelId = pathParts[pathParts.length - 1];
-  console.log('[DDU MAINWORLD] Channel ID:', channelId);
+  return pathParts[pathParts.length - 1];
+}
 
-  if (!channelId || channelId === 'channels') {
-    console.error('[DDU MAINWORLD] Could not determine channel ID from URL:', location.pathname);
-    return;
-  }
-
-  // 2. Get Discord's auth token
+function getDiscordToken() {
   let token = null;
 
-  // Method 1: iframe trick to access localStorage (bypasses extension script sandbox)
+  // Method 1: iframe trick to access localStorage
   try {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
@@ -30,8 +22,7 @@ window.addEventListener('ddu-inject-message', async (e) => {
     const raw = iframe.contentWindow.localStorage.getItem('token');
     iframe.remove();
     if (raw) {
-      token = raw.replace(/^"|"$/g, ''); // Strip surrounding quotes
-      console.log('[DDU MAINWORLD] Token from iframe localStorage. Length:', token.length, 'Type:', typeof token);
+      token = raw.replace(/^"|"$/g, '');
     }
   } catch (e) {
     console.error('[DDU MAINWORLD] iframe localStorage failed:', e);
@@ -47,7 +38,6 @@ window.addEventListener('ddu-inject-message', async (e) => {
             const t = mod.default.getToken();
             if (typeof t === 'string' && t.length > 10) {
               token = t;
-              console.log('[DDU MAINWORLD] Token from webpack. Length:', token.length, 'Type:', typeof token);
             }
           }
         }
@@ -57,9 +47,40 @@ window.addEventListener('ddu-inject-message', async (e) => {
     }
   }
 
+  return token;
+}
+
+async function sendSingleMessage(channelId, token, content) {
+  const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ content })
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API ${res.status}: ${errText}`);
+  }
+  return res;
+}
+
+// ── Single message send (existing) ───────────────────────────────
+
+window.addEventListener('ddu-inject-message', async (e) => {
+  const linkText = e.detail;
+  console.log('[DDU MAINWORLD] Received inject request:', linkText);
+
+  const channelId = getChannelId();
+  if (!channelId || channelId === 'channels') {
+    console.error('[DDU MAINWORLD] Could not determine channel ID');
+    return;
+  }
+
+  const token = getDiscordToken();
   if (!token) {
-    console.error('[DDU MAINWORLD] Could not get Discord token. Falling back to paste-only.');
-    // Fallback: just paste the text, user presses Enter manually
+    console.error('[DDU MAINWORLD] Could not get Discord token. Falling back to paste.');
     const editor = document.querySelector('[class*="textArea"][class*="__"], [class*="channelTextArea"] textarea');
     if (editor) {
       editor.focus();
@@ -70,27 +91,48 @@ window.addEventListener('ddu-inject-message', async (e) => {
 
   console.log('[DDU MAINWORLD] Token acquired. Sending message via Discord API...');
 
-  // 3. Send the message directly via Discord's API
   try {
-    const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ content: linkText })
-    });
-
-    if (res.ok) {
-      console.log('[DDU MAINWORLD] ✅ Message sent successfully via Discord API!');
-      window.dispatchEvent(new CustomEvent('ddu-send-result', { detail: { success: true } }));
-    } else {
-      const errText = await res.text();
-      console.error('[DDU MAINWORLD] ❌ API error:', res.status, errText);
-      window.dispatchEvent(new CustomEvent('ddu-send-result', { detail: { success: false, error: errText } }));
-    }
+    await sendSingleMessage(channelId, token, linkText);
+    console.log('[DDU MAINWORLD] ✅ Message sent successfully!');
+    window.dispatchEvent(new CustomEvent('ddu-send-result', { detail: { success: true } }));
   } catch (err) {
-    console.error('[DDU MAINWORLD] ❌ Fetch failed:', err);
+    console.error('[DDU MAINWORLD] ❌ Send failed:', err);
     window.dispatchEvent(new CustomEvent('ddu-send-result', { detail: { success: false, error: err.message } }));
   }
 });
+
+// ── Chunked message send (new — for long text) ──────────────────
+
+window.addEventListener('ddu-send-chunks', async (e) => {
+  const chunks = e.detail; // string[]
+  console.log(`[DDU MAINWORLD] Received ${chunks.length} chunks to send`);
+
+  const channelId = getChannelId();
+  if (!channelId || channelId === 'channels') {
+    window.dispatchEvent(new CustomEvent('ddu-chunks-result', { detail: { success: false, error: 'No channel ID' } }));
+    return;
+  }
+
+  const token = getDiscordToken();
+  if (!token) {
+    window.dispatchEvent(new CustomEvent('ddu-chunks-result', { detail: { success: false, error: 'No token' } }));
+    return;
+  }
+
+  try {
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`[DDU MAINWORLD] Sending chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`);
+      await sendSingleMessage(channelId, token, chunks[i]);
+      // Small delay between chunks to avoid rate limiting
+      if (i < chunks.length - 1) {
+        await new Promise(r => setTimeout(r, 600));
+      }
+    }
+    console.log('[DDU MAINWORLD] ✅ All chunks sent!');
+    window.dispatchEvent(new CustomEvent('ddu-chunks-result', { detail: { success: true, count: chunks.length } }));
+  } catch (err) {
+    console.error('[DDU MAINWORLD] ❌ Chunk send failed:', err);
+    window.dispatchEvent(new CustomEvent('ddu-chunks-result', { detail: { success: false, error: err.message } }));
+  }
+});
+

@@ -2,6 +2,7 @@ const DEFAULTS = {
   autoSend: true,
   hiddenLink: true,
   pdfFormat: true,
+  longTextSplit: true,
   sizeThreshold: 10,
   uploadCount: 0,
   dataSavedMB: 0
@@ -14,6 +15,7 @@ function loadSettings() {
     (document.getElementById('autoSend') as HTMLInputElement).checked = data.autoSend;
     (document.getElementById('hiddenLink') as HTMLInputElement).checked = data.hiddenLink;
     (document.getElementById('pdfFormat') as HTMLInputElement).checked = data.pdfFormat;
+    (document.getElementById('longTextSplit') as HTMLInputElement).checked = data.longTextSplit;
 
     // Number
     (document.getElementById('sizeThreshold') as HTMLInputElement).value = String(data.sizeThreshold);
@@ -87,6 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle: PDF Format
   document.getElementById('pdfFormat')!.addEventListener('change', (e) => {
     saveSetting('pdfFormat', (e.target as HTMLInputElement).checked);
+  });
+
+  // Toggle: Long Text Split
+  document.getElementById('longTextSplit')!.addEventListener('change', (e) => {
+    saveSetting('longTextSplit', (e.target as HTMLInputElement).checked);
   });
 
   // Number: Size threshold

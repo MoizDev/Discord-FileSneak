@@ -242,9 +242,147 @@ document.addEventListener('drop', (e) => {
   getSizeThreshold((threshold) => {
     const largeFile = files.find(f => f.size > threshold);
     if (largeFile) {
+      // Check if it's a .txt file — offer chunked send instead
+      if (largeFile.name.toLowerCase().endsWith('.txt') || largeFile.type === 'text/plain') {
+        chrome.storage.local.get({ longTextSplit: true }, (prefs) => {
+          if (prefs.longTextSplit) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleTextFile(largeFile);
+            return;
+          }
+        });
+      }
       e.preventDefault();
       e.stopPropagation();
       showOverlay(largeFile);
     }
   });
 }, { capture: true });
+
+// ─── LONG TEXT SPLITTING ────────────────────────────────────────
+
+const DISCORD_CHAR_LIMIT = 2000;
+
+function splitTextIntoChunks(text: string, limit: number = DISCORD_CHAR_LIMIT): string[] {
+  const chunks: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= limit) {
+      chunks.push(remaining);
+      break;
+    }
+
+    let splitAt = limit;
+
+    // Try to split at a double newline (paragraph boundary)
+    const doubleNewline = remaining.lastIndexOf('\n\n', limit);
+    if (doubleNewline > limit * 0.5) {
+      splitAt = doubleNewline + 2;
+    } else {
+      // Try to split at a single newline
+      const singleNewline = remaining.lastIndexOf('\n', limit);
+      if (singleNewline > limit * 0.3) {
+        splitAt = singleNewline + 1;
+      } else {
+        // Try to split at a space (word boundary)
+        const space = remaining.lastIndexOf(' ', limit);
+        if (space > limit * 0.3) {
+          splitAt = space + 1;
+        }
+        // Else: hard cut at the limit
+      }
+    }
+
+    chunks.push(remaining.slice(0, splitAt));
+    remaining = remaining.slice(splitAt);
+  }
+
+  return chunks;
+}
+
+function sendChunks(chunks: string[]) {
+  if (!bridgeReady) {
+    navigator.clipboard.writeText(chunks.join('')).then(() => {
+      alert('Bridge not ready. Full text copied to clipboard.');
+    });
+    return;
+  }
+
+  const onResult = ((e: CustomEvent) => {
+    window.removeEventListener('ddu-chunks-result', onResult as EventListener);
+    if (e.detail?.success) {
+      console.log(`[DDU ISOLATED] All ${e.detail.count} chunks sent!`);
+    } else {
+      console.error('[DDU ISOLATED] Chunk send failed:', e.detail?.error);
+      alert('Failed to send some chunks: ' + (e.detail?.error || 'Unknown error'));
+    }
+  }) as EventListener;
+  window.addEventListener('ddu-chunks-result', onResult);
+
+  window.dispatchEvent(new CustomEvent('ddu-send-chunks', { detail: chunks }));
+}
+
+// Intercept Enter on long messages in Discord's textarea
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.shiftKey) return; // Shift+Enter = newline, ignore
+
+  chrome.storage.local.get({ longTextSplit: true }, (prefs) => {
+    if (!prefs.longTextSplit) return;
+
+    const textarea = document.querySelector('[class*="textArea"][class*="__"] [role="textbox"], [class*="channelTextArea"] textarea') as HTMLElement;
+    if (!textarea) return;
+
+    const text = (textarea as HTMLTextAreaElement).value || textarea.innerText || textarea.textContent || '';
+    if (text.length <= DISCORD_CHAR_LIMIT) return;
+
+    // It's a long message! Intercept it.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    console.log(`[DDU ISOLATED] Long text detected (${text.length} chars). Splitting into chunks...`);
+
+    const chunks = splitTextIntoChunks(text);
+    console.log(`[DDU ISOLATED] Split into ${chunks.length} chunks`);
+
+    // Clear the textarea  
+    if ((textarea as HTMLTextAreaElement).value !== undefined) {
+      (textarea as HTMLTextAreaElement).value = '';
+    } else {
+      textarea.textContent = '';
+    }
+    // Dispatch input event so React picks up the clear
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    sendChunks(chunks);
+  });
+}, { capture: true });
+
+// Handle .txt file uploads — read and send as chunked messages
+function handleTextFile(file: File) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = reader.result as string;
+    if (text.length <= DISCORD_CHAR_LIMIT) {
+      // Small enough to send as one message
+      if (bridgeReady) {
+        window.dispatchEvent(new CustomEvent('ddu-inject-message', { detail: text }));
+      }
+      return;
+    }
+
+    const chunks = splitTextIntoChunks(text);
+    const proceed = confirm(
+      `📄 "${file.name}" is ${text.length.toLocaleString()} characters.\n\n` +
+      `This will be split into ${chunks.length} messages and sent sequentially.\n\n` +
+      `Continue?`
+    );
+
+    if (proceed) {
+      sendChunks(chunks);
+    }
+  };
+  reader.readAsText(file);
+}
+
