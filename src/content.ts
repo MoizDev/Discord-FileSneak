@@ -324,39 +324,50 @@ function sendChunks(chunks: string[]) {
   window.dispatchEvent(new CustomEvent('ddu-send-chunks', { detail: chunks }));
 }
 
+// Cache the long text setting synchronously so we can use it in the keydown handler
+let longTextSplitEnabled = true;
+chrome.storage.local.get({ longTextSplit: true }, (data) => {
+  longTextSplitEnabled = data.longTextSplit;
+});
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.longTextSplit) {
+    longTextSplitEnabled = changes.longTextSplit.newValue;
+  }
+});
+
 // Intercept Enter on long messages in Discord's textarea
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || e.shiftKey) return; // Shift+Enter = newline, ignore
+  if (e.key !== 'Enter' || e.shiftKey) return;
+  if (!longTextSplitEnabled) return;
 
-  chrome.storage.local.get({ longTextSplit: true }, (prefs) => {
-    if (!prefs.longTextSplit) return;
+  const textarea = document.querySelector('[class*="textArea"][class*="__"] [role="textbox"], [class*="channelTextArea"] textarea') as HTMLElement;
+  if (!textarea) return;
 
-    const textarea = document.querySelector('[class*="textArea"][class*="__"] [role="textbox"], [class*="channelTextArea"] textarea') as HTMLElement;
-    if (!textarea) return;
+  const text = (textarea as HTMLTextAreaElement).value || textarea.innerText || textarea.textContent || '';
+  if (text.length <= DISCORD_CHAR_LIMIT) return;
 
-    const text = (textarea as HTMLTextAreaElement).value || textarea.innerText || textarea.textContent || '';
-    if (text.length <= DISCORD_CHAR_LIMIT) return;
+  // Block the event synchronously BEFORE any async work
+  e.preventDefault();
+  e.stopImmediatePropagation();
 
-    // It's a long message! Intercept it.
-    e.preventDefault();
-    e.stopImmediatePropagation();
+  const chunks = splitTextIntoChunks(text);
 
-    console.log(`[DDU ISOLATED] Long text detected (${text.length} chars). Splitting into chunks...`);
+  const proceed = confirm(
+    `Your message is ${text.length.toLocaleString()} characters (${(text.length - DISCORD_CHAR_LIMIT).toLocaleString()} over limit).\n\n` +
+    `Split into ${chunks.length} messages and send?\n\n` +
+    `Cancel to go back and edit.`
+  );
 
-    const chunks = splitTextIntoChunks(text);
-    console.log(`[DDU ISOLATED] Split into ${chunks.length} chunks`);
+  if (!proceed) return;
 
-    // Clear the textarea  
-    if ((textarea as HTMLTextAreaElement).value !== undefined) {
-      (textarea as HTMLTextAreaElement).value = '';
-    } else {
-      textarea.textContent = '';
-    }
-    // Dispatch input event so React picks up the clear
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  console.log(`[DDU ISOLATED] Long text: ${text.length} chars → ${chunks.length} chunks`);
 
-    sendChunks(chunks);
-  });
+  // Clear the editor using select-all + delete so React/Lexical stays in sync
+  textarea.focus();
+  document.execCommand('selectAll', false);
+  document.execCommand('delete', false);
+
+  sendChunks(chunks);
 }, { capture: true });
 
 // Handle .txt file uploads — read and send as chunked messages
