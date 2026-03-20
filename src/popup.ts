@@ -145,4 +145,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  // Listen for background stats updates in real-time
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      if (changes.uploadCount || changes.dataSavedMB) {
+        loadSettings();
+      }
+    }
+  });
 });
