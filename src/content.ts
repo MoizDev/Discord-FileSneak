@@ -2,7 +2,84 @@ console.log('Discord Drive Uploader content script loaded.');
 
 let isUploading = false;
 
-// UI Overlay functions
+// ─── TOAST NOTIFICATION (replaces alert()) ──────────────────────
+function showToast(msg: string, type: 'info' | 'success' | 'error' = 'info') {
+  const existing = document.querySelector('.ddu-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `ddu-toast ddu-toast-${type}`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('ddu-toast-show');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('ddu-toast-show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ─── CUSTOM PROMPT (replaces confirm()) ─────────────────────────
+function showPrompt(opts: {
+  icon: string;
+  title: string;
+  body: string;
+  stats?: { label: string; value: string }[];
+  confirmText: string;
+  cancelText: string;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('ddu-overlay');
+    if (existing) existing.remove();
+
+    const statsHtml = opts.stats
+      ? `<div class="ddu-prompt-stats">${opts.stats.map(s =>
+          `<div class="ddu-prompt-stat"><span class="ddu-stat-value">${s.value}</span><span class="ddu-stat-label">${s.label}</span></div>`
+        ).join('')}</div>`
+      : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ddu-overlay';
+    overlay.innerHTML = `
+      <div class="ddu-modal">
+        <div class="ddu-modal-header">
+          <div class="ddu-prompt-icon">${opts.icon}</div>
+          <h2>${opts.title}</h2>
+        </div>
+        <div class="ddu-modal-body">
+          <p>${opts.body}</p>
+          ${statsHtml}
+        </div>
+        <div class="ddu-modal-actions">
+          <button class="ddu-btn ddu-btn-secondary" id="ddu-prompt-cancel">${opts.cancelText}</button>
+          <button class="ddu-btn ddu-btn-primary" id="ddu-prompt-confirm">${opts.confirmText}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('ddu-prompt-cancel')!.addEventListener('click', () => {
+      overlay.remove();
+      resolve(false);
+    });
+    document.getElementById('ddu-prompt-confirm')!.addEventListener('click', () => {
+      overlay.remove();
+      resolve(true);
+    });
+    // Click outside to cancel
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        resolve(false);
+      }
+    });
+  });
+}
+
+// ─── FILE UPLOAD OVERLAY ────────────────────────────────────────
 function showOverlay(file: File) {
   const existing = document.getElementById('ddu-overlay');
   if (existing) existing.remove();
@@ -11,19 +88,23 @@ function showOverlay(file: File) {
   overlay.id = 'ddu-overlay';
   overlay.innerHTML = `
     <div class="ddu-modal">
-      <h2>File is too powerful! 🚀</h2>
-      <p><b>${file.name}</b></p>
-      <p>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-      <p>Would you like to bypass the Discord limit by uploading to Google Drive?</p>
-      <div id="ddu-progress-container" style="display: none; margin-top: 16px;">
-        <p id="ddu-status" style="margin-bottom: 8px; font-weight: 500;">Starting upload...</p>
-        <div style="width: 100%; background: #2b2d31; border-radius: 6px; height: 12px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-          <div id="ddu-progress-fill" style="width: 0%; height: 100%; background: #5865F2; transition: width 0.2s ease-out;"></div>
+      <div class="ddu-modal-header">
+        <h2>File too powerful! 🚀</h2>
+        <p class="ddu-subtitle">Bypass Discord's limit via Google Drive</p>
+      </div>
+      <div class="ddu-modal-body">
+        <p class="ddu-filename">${file.name}</p>
+        <p class="ddu-filesize">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+      </div>
+      <div class="ddu-progress-wrap" id="ddu-progress-container">
+        <p class="ddu-progress-status" id="ddu-status">Starting upload...</p>
+        <div class="ddu-progress-track">
+          <div class="ddu-progress-fill" id="ddu-progress-fill"></div>
         </div>
       </div>
-      <div id="ddu-buttons">
-        <button id="ddu-btn-cancel" class="ddu-button" style="background: #3c3f45; margin-right: 8px;">Cancel</button>
-        <button id="ddu-btn-upload" class="ddu-button">Upload to Drive</button>
+      <div class="ddu-modal-actions" id="ddu-buttons">
+        <button class="ddu-btn ddu-btn-secondary" id="ddu-btn-cancel">Cancel</button>
+        <button class="ddu-btn ddu-btn-primary" id="ddu-btn-upload">Upload to Drive</button>
       </div>
     </div>
   `;
@@ -48,7 +129,7 @@ function showOverlay(file: File) {
       overlay.remove();
     } catch (err: any) {
       if (status) status.innerText = 'Error: ' + err.message;
-      if (btnContainer) btnContainer.style.display = 'block';
+      if (btnContainer) btnContainer.style.display = 'flex';
     }
   });
 }
@@ -136,7 +217,7 @@ async function uploadToDrive(file: File, statusEl: HTMLElement) {
                 } else {
                   // Just paste into textarea, don't auto-send
                   navigator.clipboard.writeText(linkText).then(() => {
-                    alert('Upload complete! Link copied to clipboard. Paste it with Ctrl+V.');
+                    showToast('✅ Link copied to clipboard — paste with Ctrl+V', 'success');
                   });
                 }
                 resolve();
@@ -190,7 +271,7 @@ function injectLink(linkText: string) {
 
   if (!bridgeReady) {
     navigator.clipboard.writeText(linkText).then(() => {
-      alert('Upload complete! Link copied to clipboard. Press Ctrl+V to paste it.');
+      showToast('✅ Link copied — paste with Ctrl+V', 'success');
     });
     return;
   }
@@ -203,7 +284,7 @@ function injectLink(linkText: string) {
     } else {
       console.error('[DDU ISOLATED] Send failed:', e.detail?.error);
       navigator.clipboard.writeText(linkText).then(() => {
-        alert('Auto-send failed. Link copied to clipboard — press Ctrl+V and Enter.');
+        showToast('Auto-send failed — link copied to clipboard', 'error');
       });
     }
   }) as EventListener;
@@ -305,7 +386,7 @@ function splitTextIntoChunks(text: string, limit: number = DISCORD_CHAR_LIMIT): 
 function sendChunks(chunks: string[]) {
   if (!bridgeReady) {
     navigator.clipboard.writeText(chunks.join('')).then(() => {
-      alert('Bridge not ready. Full text copied to clipboard.');
+      showToast('Bridge not ready — text copied to clipboard', 'error');
     });
     return;
   }
@@ -316,7 +397,7 @@ function sendChunks(chunks: string[]) {
       console.log(`[DDU ISOLATED] All ${e.detail.count} chunks sent!`);
     } else {
       console.error('[DDU ISOLATED] Chunk send failed:', e.detail?.error);
-      alert('Failed to send some chunks: ' + (e.detail?.error || 'Unknown error'));
+      showToast('Failed to send chunks: ' + (e.detail?.error || 'Unknown'), 'error');
     }
   }) as EventListener;
   window.addEventListener('ddu-chunks-result', onResult);
@@ -352,22 +433,26 @@ document.addEventListener('keydown', (e) => {
 
   const chunks = splitTextIntoChunks(text);
 
-  const proceed = confirm(
-    `Your message is ${text.length.toLocaleString()} characters (${(text.length - DISCORD_CHAR_LIMIT).toLocaleString()} over limit).\n\n` +
-    `Split into ${chunks.length} messages and send?\n\n` +
-    `Cancel to go back and edit.`
-  );
+  showPrompt({
+    icon: '📝',
+    title: 'Message Too Long',
+    body: 'Your message exceeds Discord\'s 2,000 character limit.',
+    stats: [
+      { label: 'Characters', value: text.length.toLocaleString() },
+      { label: 'Over limit', value: '+' + (text.length - DISCORD_CHAR_LIMIT).toLocaleString() },
+      { label: 'Messages', value: String(chunks.length) }
+    ],
+    confirmText: `Send as ${chunks.length} messages`,
+    cancelText: 'Go back'
+  }).then((proceed) => {
+    if (!proceed) return;
 
-  if (!proceed) return;
-
-  console.log(`[DDU ISOLATED] Long text: ${text.length} chars → ${chunks.length} chunks`);
-
-  // Clear the editor using select-all + delete so React/Lexical stays in sync
-  textarea.focus();
-  document.execCommand('selectAll', false);
-  document.execCommand('delete', false);
-
-  sendChunks(chunks);
+    console.log(`[DDU ISOLATED] Long text: ${text.length} chars → ${chunks.length} chunks`);
+    textarea.focus();
+    document.execCommand('selectAll', false);
+    document.execCommand('delete', false);
+    sendChunks(chunks);
+  });
 }, { capture: true });
 
 // Handle .txt file uploads — read and send as chunked messages
@@ -384,15 +469,19 @@ function handleTextFile(file: File) {
     }
 
     const chunks = splitTextIntoChunks(text);
-    const proceed = confirm(
-      `📄 "${file.name}" is ${text.length.toLocaleString()} characters.\n\n` +
-      `This will be split into ${chunks.length} messages and sent sequentially.\n\n` +
-      `Continue?`
-    );
-
-    if (proceed) {
-      sendChunks(chunks);
-    }
+    showPrompt({
+      icon: '📄',
+      title: 'Send Text File as Messages',
+      body: `<span class="ddu-filename">${file.name}</span> contains long text.`,
+      stats: [
+        { label: 'Characters', value: text.length.toLocaleString() },
+        { label: 'Messages', value: String(chunks.length) }
+      ],
+      confirmText: `Send as ${chunks.length} messages`,
+      cancelText: 'Cancel'
+    }).then((proceed) => {
+      if (proceed) sendChunks(chunks);
+    });
   };
   reader.readAsText(file);
 }
@@ -417,17 +506,59 @@ document.addEventListener('paste', (e) => {
 
   const chunks = splitTextIntoChunks(pastedText);
 
-  const proceed = confirm(
-    `📋 Pasted text is ${pastedText.length.toLocaleString()} characters (${(pastedText.length - DISCORD_CHAR_LIMIT).toLocaleString()} over Discord's limit).\n\n` +
-    `Split into ${chunks.length} messages and send now?\n\n` +
-    `OK = Send as chunks\n` +
-    `Cancel = Paste normally (Discord will convert to .txt file)`
-  );
-
-  if (proceed) {
-    sendChunks(chunks);
-  } else {
-    // User chose to let Discord handle it — re-insert the text so Discord does its .txt conversion
-    document.execCommand('insertText', false, pastedText);
-  }
+  showPrompt({
+    icon: '📋',
+    title: 'Long Text Pasted',
+    body: 'The pasted text exceeds Discord\'s character limit.',
+    stats: [
+      { label: 'Characters', value: pastedText.length.toLocaleString() },
+      { label: 'Over limit', value: '+' + (pastedText.length - DISCORD_CHAR_LIMIT).toLocaleString() },
+      { label: 'Messages', value: String(chunks.length) }
+    ],
+    confirmText: `Send as ${chunks.length} messages`,
+    cancelText: 'Paste normally'
+  }).then((proceed) => {
+    if (proceed) {
+      sendChunks(chunks);
+    } else {
+      // Re-insert text so Discord does its normal .txt conversion
+      const ta = document.querySelector('[class*="textArea"][class*="__"] [role="textbox"], [class*="channelTextArea"] textarea') as HTMLElement;
+      if (ta) { ta.focus(); document.execCommand('insertText', false, pastedText); }
+    }
+  });
 }, { capture: true });
+
+// ─── NITRO POPUP SUPPRESSOR ─────────────────────────────────────
+// Discord shows a Nitro upsell modal when uploading files over the limit.
+// We watch for it and remove it instantly so only our overlay appears.
+
+const nitroObserver = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      
+      // Discord's upload-too-large / Nitro upsell modals contain specific text
+      const text = node.textContent || '';
+      const isNitroPopup = (
+        (text.includes('Nitro') && text.includes('upload')) ||
+        (text.includes('Your files are too powerful') || text.includes('file is too powerful')) ||
+        (text.includes('too large') && text.includes('limit')) ||
+        (text.includes('Wanna share') && text.includes('server boost'))
+      );
+      
+      // Also check if it's a layer/modal container with Nitro-related content
+      const hasNitroClass = node.querySelector?.(
+        '[class*="upsellModal"], [class*="uploadModal"], [class*="premiumPromo"]'
+      );
+
+      if (isNitroPopup || hasNitroClass) {
+        console.log('[DDU] Suppressed Nitro/upload popup');
+        node.remove();
+        return;
+      }
+    }
+  }
+});
+
+nitroObserver.observe(document.body, { childList: true, subtree: true });
+

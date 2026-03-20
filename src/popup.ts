@@ -55,12 +55,12 @@ function checkAuthStatus() {
 // ── Save a single setting ─────────────────────────────
 function saveSetting(key: string, value: any) {
   chrome.storage.local.set({ [key]: value }, () => {
-    showToast('Settings saved');
+    showPopupToast('Settings saved');
   });
 }
 
 // ── Toast notification ────────────────────────────────
-function showToast(msg: string) {
+function showPopupToast(msg: string) {
   let toast = document.querySelector('.toast') as HTMLElement;
   if (!toast) {
     toast = document.createElement('div');
@@ -127,16 +127,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sign out — clear the token
         chrome.storage.local.remove(['driveToken', 'driveTokenExpiry'], () => {
           checkAuthStatus();
-          showToast('Signed out');
+          showPopupToast('Signed out');
         });
       } else {
         // Sign in — trigger the OAuth flow via background script
         chrome.runtime.sendMessage({ action: 'getAuthToken' }, (response) => {
           if (response?.token) {
             checkAuthStatus();
-            showToast('Connected!');
+            showPopupToast('Connected!');
           } else {
-            showToast('Auth failed: ' + (response?.error || 'Unknown'));
+            showPopupToast('Auth failed: ' + (response?.error || 'Unknown'));
           }
         });
       }
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirm('Reset all settings and clear saved data?')) {
       chrome.storage.local.clear(() => {
         loadSettings();
-        showToast('Everything reset');
+        showPopupToast('Everything reset');
       });
     }
   });

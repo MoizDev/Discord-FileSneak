@@ -1,38 +1,218 @@
-/* Custom UI styles for Discord Drive Uploader overlay */
+/* ─── DDU Overlay System ─────────────────────────────────────── */
+
 #ddu-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
   z-index: 999999;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  animation: ddu-fade-in 0.15s ease-out;
 }
+
+@keyframes ddu-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ddu-slide-up {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Modal Card ─────────────────────────────────────────────── */
 
 .ddu-modal {
   background: #313338;
-  padding: 24px;
+  padding: 0;
   border-radius: 8px;
-  color: white;
+  color: #dbdee1;
   text-align: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  min-width: 360px;
+  max-width: 460px;
+  animation: ddu-slide-up 0.2s ease-out;
+  overflow: hidden;
 }
 
-.ddu-button {
-  background: #5865F2;
-  color: white;
+.ddu-modal-header {
+  padding: 20px 20px 0;
+}
+
+.ddu-modal-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f2f3f5;
+}
+
+.ddu-modal-header .ddu-subtitle {
+  font-size: 13px;
+  color: #b5bac1;
+  margin: 0;
+}
+
+.ddu-modal-body {
+  padding: 16px 20px;
+}
+
+.ddu-modal-body p {
+  margin: 4px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ddu-modal-body .ddu-filename {
+  font-weight: 600;
+  color: #f2f3f5;
+}
+
+.ddu-modal-body .ddu-filesize {
+  color: #b5bac1;
+  font-size: 13px;
+}
+
+/* ─── Progress Bar ───────────────────────────────────────────── */
+
+.ddu-progress-wrap {
+  display: none;
+  padding: 0 20px 20px;
+}
+
+.ddu-progress-status {
+  font-size: 13px;
+  font-weight: 500;
+  color: #b5bac1;
+  margin-bottom: 8px;
+}
+
+.ddu-progress-track {
+  width: 100%;
+  background: #1e1f22;
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.ddu-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #5865F2, #7289da);
+  border-radius: 6px;
+  transition: width 0.25s ease-out;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────── */
+
+.ddu-modal-actions {
+  display: flex;
+  padding: 16px;
+  background: #2b2d31;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ddu-btn {
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 16px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.15s, opacity 0.15s;
 }
 
-.ddu-button:hover {
-  background: #4752C4;
+.ddu-btn:hover { opacity: 0.85; }
+
+.ddu-btn-primary {
+  background: #5865F2;
+  color: #fff;
 }
+
+.ddu-btn-secondary {
+  background: transparent;
+  color: #b5bac1;
+}
+
+.ddu-btn-secondary:hover {
+  color: #dbdee1;
+  background: rgba(255,255,255,0.05);
+}
+
+/* ─── Long Text Prompt (replaces confirm()) ──────────────────── */
+
+.ddu-prompt-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.ddu-prompt-stats {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 12px 0;
+}
+
+.ddu-prompt-stat {
+  background: #1e1f22;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.ddu-prompt-stat .ddu-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f2f3f5;
+  display: block;
+}
+
+.ddu-prompt-stat .ddu-stat-label {
+  font-size: 11px;
+  color: #b5bac1;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Toast Notifications (replaces alert()) ─────────────────── */
+
+.ddu-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #313338;
+  color: #f2f3f5;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'gg sans', 'Noto Sans', Helvetica, Arial, sans-serif;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  z-index: 9999999;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 400px;
+  border-left: 3px solid #5865F2;
+}
+
+.ddu-toast.ddu-toast-error {
+  border-left-color: #ed4245;
+}
+
+.ddu-toast.ddu-toast-success {
+  border-left-color: #3ba55d;
+}
+
+.ddu-toast.ddu-toast-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
