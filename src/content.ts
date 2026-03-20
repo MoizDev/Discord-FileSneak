@@ -397,3 +397,37 @@ function handleTextFile(file: File) {
   reader.readAsText(file);
 }
 
+// ─── PASTE INTERCEPTOR ─────────────────────────────────────────
+// Discord auto-converts long pasted text into a .txt file attachment.
+// We intercept the paste BEFORE Discord sees it.
+
+document.addEventListener('paste', (e) => {
+  if (!longTextSplitEnabled) return;
+
+  const pastedText = e.clipboardData?.getData('text/plain');
+  if (!pastedText || pastedText.length <= DISCORD_CHAR_LIMIT) return;
+
+  // Check we're pasting into Discord's message editor
+  const textarea = document.querySelector('[class*="textArea"][class*="__"] [role="textbox"], [class*="channelTextArea"] textarea') as HTMLElement;
+  if (!textarea || !textarea.contains(document.activeElement) && textarea !== document.activeElement) return;
+
+  // Block the paste so Discord doesn't auto-convert to .txt
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  const chunks = splitTextIntoChunks(pastedText);
+
+  const proceed = confirm(
+    `📋 Pasted text is ${pastedText.length.toLocaleString()} characters (${(pastedText.length - DISCORD_CHAR_LIMIT).toLocaleString()} over Discord's limit).\n\n` +
+    `Split into ${chunks.length} messages and send now?\n\n` +
+    `OK = Send as chunks\n` +
+    `Cancel = Paste normally (Discord will convert to .txt file)`
+  );
+
+  if (proceed) {
+    sendChunks(chunks);
+  } else {
+    // User chose to let Discord handle it — re-insert the text so Discord does its .txt conversion
+    document.execCommand('insertText', false, pastedText);
+  }
+}, { capture: true });
